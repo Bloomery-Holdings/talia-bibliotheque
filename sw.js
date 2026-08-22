@@ -1,5 +1,5 @@
 /* Precache the whole shelf so the tablet works offline after first visit. */
-const V = 'talia-v8';
+const V = 'talia-v9';
 const FILES = ['./index.html','./talia-leo-ballon.html','./talia-leo-jus.html',
   './talia-leo-pluie.html','./talia-sonson-mer.html','./talia-jeux.html','./talia-atelier.html',
   './talia-science-01.html','./talia-detective.html'];
