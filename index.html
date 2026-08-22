@@ -1,0 +1,49 @@
+<title>La bibliothèque de Talia</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&display=swap">
+<style>
+:root{--paper:#FBF4E6;--ink:#33291C;--soft:#8A7B63;--fr:#B34A7E;--card:#FFFFFF;--edge:#E5D9C3;
+  --f:"Baloo 2","Comic Sans MS",system-ui,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--f);min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;padding:26px 14px;gap:14px}
+h1{font-size:clamp(30px,6vw,50px);margin:0;color:var(--fr);text-align:center}
+p.sub{color:var(--soft);margin:0;text-align:center;font-size:clamp(15px,2.4vw,18px)}
+.shelf{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;
+  width:min(96vw,900px);margin-top:10px}
+a.book{display:flex;flex-direction:column;align-items:center;gap:6px;text-decoration:none;
+  background:var(--card);border:3px solid var(--edge);border-radius:20px;
+  box-shadow:0 6px 0 var(--edge);padding:18px 14px;color:var(--ink);min-height:150px;
+  justify-content:center}
+a.book:active{transform:translateY(3px);box-shadow:0 3px 0 var(--edge)}
+.big{font-size:52px;line-height:1}
+.fr{font-size:21px;font-weight:700;color:var(--fr);text-align:center}
+.en{font-size:14px;color:var(--soft);text-align:center}
+.note{margin-top:16px;font-size:13px;color:var(--soft);max-width:60ch;text-align:center}
+</style>
+<link rel="manifest" href="manifest.webmanifest">
+<script>if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");</script>
+<h1>La bibliothèque de Talia</h1>
+<p class="sub">Touche un livre ! · Touch a book!</p>
+<div class="shelf">
+  <a class="book" href="talia-leo-ballon.html">
+    <span class="big">📗</span><span class="fr">Léo a perdu son ballon</span><span class="en">Leo Lost His Ball</span></a>
+  <a class="book" href="talia-leo-jus.html">
+    <span class="big">🧃</span><span class="fr">Léo et le jus d'orange</span><span class="en">Leo and the Orange Juice</span></a>
+  <a class="book" href="talia-leo-pluie.html">
+    <span class="big">🌧️</span><span class="fr">Léo et la pluie</span><span class="en">Leo and the Rain</span></a>
+  <a class="book" href="talia-sonson-mer.html">
+    <span class="big">🐚</span><span class="fr">Talia et Sonson à la mer</span><span class="en">Talia and Sonson at the Sea</span></a>
+  <a class="book" href="talia-jeux.html">
+    <span class="big">🎲</span><span class="fr">Les jeux</span><span class="en">Games — touch, pairs, sounds</span></a>
+  <a class="book" href="talia-atelier.html">
+    <span class="big">🎨</span><span class="fr">L'atelier</span><span class="en">Studio — draw, build, create</span></a>
+  <a class="book" href="talia-science-01.html">
+    <span class="big">🔬</span><span class="fr">La petite scientifique</span><span class="en">Science — ten little experiments</span></a>
+  <a class="book" href="talia-detective.html">
+    <span class="big">🕵️</span><span class="fr">Le petit détective</span><span class="en">Detective — listen to the clues, find the friend</span></a>
+</div>
+<p class="note">Pour maman : chaque page s'ouvre dans le même navigateur connecté à claude.ai.
+Ajoute cette page à l'écran d'accueil de la tablette (« Add to Home Screen ») et toute
+l'app est à un doigt. La version « vraie adresse web » est prête dans le dossier
+<b>site/</b> — voir docs/SHIP-TO-TABLET.md.</p>

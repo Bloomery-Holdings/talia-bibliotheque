@@ -1,0 +1,9 @@
+{
+  "name": "La bibliothèque de Talia",
+  "short_name": "Talia",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#FBF4E6",
+  "theme_color": "#B34A7E",
+  "icons": [{ "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }]
+}
