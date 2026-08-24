@@ -23,30 +23,38 @@ a.book:active{transform:translateY(3px);box-shadow:0 3px 0 var(--edge)}
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <script>if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
-/* One-tap install on Android (Chrome / Samsung Internet / Edge). iOS has no install
-   API, so an illustrated share-button card shows instead. */
+/* Install box: ALWAYS visible in a browser tab (hidden only once the app runs
+   installed). One-tap button where the browser offers the prompt event; written
+   per-browser steps everywhere else — a Chrome-only event must never be the only
+   route (2026-08-24: it was, and on Nermeen's tablet nothing showed at all). */
 let defP = null;
 addEventListener('beforeinstallprompt', e => { e.preventDefault(); defP = e;
-  const b = document.getElementById('inst'); if (b) b.style.display = ''; });
+  const b = document.getElementById('inst'); if (b){ b.style.display = ''; } });
 addEventListener('DOMContentLoaded', () => {
-  const b = document.getElementById('inst');
+  const b = document.getElementById('inst'), box = document.getElementById('instBox');
+  const installed = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  if (installed && box){ box.style.display = 'none'; return; }
   if (b) b.addEventListener('click', () => { if (defP){ defP.prompt(); defP = null; b.style.display = 'none'; } });
   if (defP && b) b.style.display = '';
-  const iOS = (/iPad|iPhone/.test(navigator.userAgent) ||
-    (/Macintosh/.test(navigator.userAgent) && 'ontouchend' in document));
-  if (iOS && !navigator.standalone){ const h = document.getElementById('iosHelp'); if (h) h.style.display = ''; }
 });
-addEventListener('appinstalled', () => { const h = document.getElementById('iosHelp'); if (h) h.style.display = 'none'; });</script>
+addEventListener('appinstalled', () => { const box = document.getElementById('instBox'); if (box) box.style.display = 'none'; });</script>
 <h1>La bibliothèque de Talia</h1>
 <p class="sub">Touche un livre ! · Touch a book!</p>
-<button id="inst" style="display:none;font-family:var(--f);font-size:20px;font-weight:700;color:#fff;
-  background:#B34A7E;border:none;border-radius:999px;padding:14px 28px;min-height:56px;cursor:pointer;
-  box-shadow:0 5px 0 #7A3156">📲 &nbsp;Mettre sur l'écran d'accueil · Install the app</button>
-<div id="iosHelp" style="display:none;background:#FFFFFF;border:3px solid #E5D9C3;border-radius:16px;
-  padding:12px 18px;max-width:60ch;text-align:center;font-size:16px;color:#33291C">
-  Sur iPad : touche le bouton <b>Partager</b> <span style="font-size:20px">⎋</span>
-  (le carré avec la flèche vers le haut, en haut de l'écran), fais défiler la liste,
-  puis touche <b>« Sur l'écran d'accueil / Add to Home Screen »</b>.</div>
+<div id="instBox" style="background:#FFFFFF;border:3px solid #E5D9C3;border-radius:16px;
+  padding:12px 18px;max-width:64ch;text-align:center;font-size:16px;color:#33291C">
+  <div style="font-weight:700;color:#B34A7E;font-size:18px;margin-bottom:6px">📲 Mettre l'app sur l'écran d'accueil · Put the app on the home screen</div>
+  <button id="inst" style="display:none;font-family:var(--f);font-size:20px;font-weight:700;color:#fff;
+    background:#B34A7E;border:none;border-radius:999px;padding:14px 28px;min-height:56px;cursor:pointer;
+    box-shadow:0 5px 0 #7A3156;margin:4px 0 8px">📲 &nbsp;Installer · Install — one tap</button>
+  <div id="instSteps" style="text-align:left;line-height:1.6">
+    <div><b>Chrome</b> (round red-yellow-green ball): tap <b>⋮</b> at the top right of THIS page → <b>“Add to Home screen”</b> or <b>“Install app”</b> → Add.</div>
+    <div style="margin-top:6px"><b>Samsung Internet</b> (purple planet): tap <b>☰</b> at the bottom right → <b>“Add page to”</b> → <b>“Home screen”</b> → Add.</div>
+    <div style="margin-top:6px"><b>iPad (Safari)</b>: tap the <b>Share</b> square-with-arrow at the top → scroll down → <b>“Add to Home Screen”</b> → Add.</div>
+    <div style="margin-top:8px;color:#8A7B63;font-size:14px">If none of these menus exist, this page is open inside another app (WhatsApp, claude.ai…) — open
+    <b>bloomery-holdings.github.io/talia-bibliotheque</b> in the real browser first. And even without the icon,
+    everything works right here in the browser.</div>
+  </div>
+</div>
 <div class="shelf">
   <a class="book" href="talia-journee.html">
     <span class="big">🌞</span><span class="fr">Une journée avec Talia</span><span class="en">A Day with Talia — your whole day, in French!</span></a>
