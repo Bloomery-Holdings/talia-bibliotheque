@@ -1,0 +1,45 @@
+# Talia's saved drawings live in a free-tier Supabase project, and Supabase pauses a
+# free project after about a week with no API activity. Nothing is lost when it pauses
+# (you can unpause for 90 days), but while it is paused the atelier cannot sync her
+# gallery between her tablet and a phone. This keeps it awake.
+#
+# It reads the publishable key out of talia-atelier.html rather than keeping a second
+# copy: that key is publishable by design and already public in this repo, and reading
+# it here means the ping keeps working if the key is ever rotated.
+#
+# NOTE: GitHub disables scheduled workflows in a public repo after 60 days with no
+# commits. This repo is committed to regularly, but if it ever goes quiet for two
+# months this will stop and the project will start pausing again.
+
+name: keep supabase awake
+
+on:
+  schedule:
+    - cron: '17 6 */4 * *'   # every 4 days; the pause threshold is about 7
+  workflow_dispatch:          # and it can always be run by hand from the Actions tab
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ping the Talia-app REST endpoint
+        run: |
+          KEY=$(grep -oE 'sb_publishable_[A-Za-z0-9_-]+' talia-atelier.html | head -1)
+          if [ -z "$KEY" ]; then
+            echo "Could not find the publishable key in talia-atelier.html."
+            echo "If the atelier page changed, update this workflow."
+            exit 1
+          fi
+          URL='https://ppgkqiynzukbzdwimixp.supabase.co/rest/v1/talia_data?select=key&limit=1'
+          CODE=$(curl -s -o /dev/null -w '%{http_code}' -H "apikey: $KEY" -H "Authorization: Bearer $KEY" "$URL")
+          echo "Supabase replied HTTP $CODE"
+          if [ "$CODE" != "200" ]; then
+            echo "The project did not answer normally. It may be paused already."
+            exit 1
+          fi
+          echo "Project is awake. Inactivity clock reset."
