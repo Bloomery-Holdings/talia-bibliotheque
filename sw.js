@@ -1,10 +1,11 @@
 /* Precache the whole shelf so the tablet works offline after first visit. */
-const V = 'talia-v20';
+const V = 'talia-v21';
 const FILES = ['./index.html','./talia-journee.html','./talia-mots-magiques.html','./talia-vie-01.html',
   './talia-jour-01.html','./talia-defis.html','./talia-cartes.html',
   './talia-leo-ballon.html','./talia-leo-jus.html',
   './talia-leo-pluie.html','./talia-sonson-mer.html','./talia-jeux.html','./talia-atelier.html',
-  './talia-science-01.html','./talia-detective.html'];
+  './talia-science-01.html','./talia-detective.html',
+  './talia-suisse-01.html'];
 self.addEventListener('install', e => e.waitUntil(caches.open(V).then(c => c.addAll(FILES)).then(()=>self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(ks =>
   Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k)))).then(()=>self.clients.claim())));
