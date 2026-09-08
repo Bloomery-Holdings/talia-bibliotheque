@@ -427,16 +427,19 @@ function lineEl(l){
    — the same thing sayDay does for the calendar, which she has had in front of her for days.
    NO NEW RECORDING: one..seven are already in the English bank. Nothing of her text changes;
    this is the order it is READ in, and her printed line is untouched. */
-async function sayEnMeanings(seg){
+async function sayEnMeanings(seg, mine){
+  if(mine===undefined) mine=++reading;
   const gs=(seg&&seg.groups)||[]; if(!gs.length) return false;
   let said=false;
   for(const g of gs){
+    if(mine!==reading) return said;
     /* \s+ NOT s+ — this text is emitted into the page as a string, so a single backslash is
        eaten and the pattern ships as /s+/, which splits on the LETTER s. Measured when it did:
        "six" became "ix" and found nothing, "seven" became "even" and found the clip for the word
        "even". The counting line then said one, two, three, four, five, even. Same trap that made
        every game title silent this morning, in a different file, within the hour. */
     for(const w of String(g.en||'').split(/\s+/).filter(Boolean)){
+      if(mine!==reading) return said;   /* a word at a time, so a page turn lands between words */
       const u=EU(w); if(!u) continue;
       await play(u.mp3,null,null,u.end); said=true;
       await new Promise(r=>setTimeout(r,90));
@@ -445,16 +448,39 @@ async function sayEnMeanings(seg){
   if(said) await new Promise(r=>setTimeout(r,420));
   return said;
 }
-async function sayLine(p){
+/* THE STORY READER TAKES A TOKEN TOO — IT WAS THE ONE READING IN THIS BOOK THAT NEVER HAD ONE.
+   Nermeen, 2026-09-08: "some of the pages that got the exercise at the end of it its recordings
+   got mixed up and tangled and cut."
+   MEASURED, and it is not only the exercise. readScreen() tested its token BETWEEN lines and never
+   INSIDE one, and a tap on a paragraph did not go through readScreen at all — so sayLine had no way
+   to be stopped once it had begun. Two consequences, both driven and logged:
+     TURNING THE PAGE MID-LINE (.probe/_orphan-readers.js): "Tu es prête ?" and "Are you ready?"
+     went on speaking on the page she had already left, on top of the new page reading itself —
+     two voices at once.
+     TAPPING TWO LINES (.probe/_two-readers.js): six sentences played, NONE of them finished. Each
+     loop's play() calls stop(), so the two readings took turns cutting each other off at 240-530 ms.
+   NOTHING ON DISK IS WRONG — A24 and A25 hold, no clip is sliced and none is shaved. It is the
+   PLAYER cutting whole clips because two readers are running. It also breaks B2 on the spot: the
+   English she needs first is the half that gets cut.
+   The token is the "reading" counter, which already existed and which show() and a refusal already
+   bump. NOTE FOR WHOEVER EDITS THIS FILE NEXT: it emits a template literal, so a BACKTICK anywhere
+   in it — even inside a comment — ends the string and breaks the build. Third time today. Passing
+   nothing mints a fresh one — which is exactly right for a tap, because a second tap should REPLACE
+   the first rather than join it. */
+async function sayLine(p, mine){
+  if(mine===undefined) mine=++reading;
   let heardEnglish=false;
   for(const span of [...p.children]){
+    if(mine!==reading) return;
     const seg=span._seg; if(!seg) continue;
     /* the English that belongs to a French part is normally the quote it follows in her own line */
-    if(seg.k!=='en' && !heardEnglish) heardEnglish = await sayEnMeanings(seg) || heardEnglish;
+    if(seg.k!=='en' && !heardEnglish) heardEnglish = await sayEnMeanings(seg, mine) || heardEnglish;
+    if(mine!==reading) return;
     const c=C(seg.id);
     if(!c){ announce('"'+seg.text.slice(0,44)+'" has no recording yet.'); continue; }
     if(seg.k==='en') heardEnglish=true;
     await play(c.mp3, [...span.querySelectorAll('.w')], c.words);
+    if(mine!==reading) return;
     await new Promise(r=>setTimeout(r,seg.k==='en'?520:240));
   }
 }
@@ -477,13 +503,23 @@ async function sayLine(p){
    newer reading ends the older loop before its next word. */
 let speakRun=0;
 function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
-async function sayFrUnits(units){
-  const run=++speakRun;
+/* THE TOKEN IS INHERITABLE, AND THAT IS THE WHOLE POINT OF IT (2026-09-08).
+   These used to mint their own run number on entry with ++speakRun. Each one alone was then
+   cancellable — but a caller that runs TWO of them in a row, which every drop branch in this game
+   does, could not be cancelled at all: stopping the first simply handed the turn to the second,
+   which minted a FRESH token and started speaking. Measured after the page-turn fix had supposedly
+   closed this: drop a card, turn the page 700 ms later, and en/mots/good.mp3 and en/mots/morning.mp3
+   both spoke on the next page — 3 ms apart, each play() stopping the last, which is unintelligible
+   as well as wrong. The escape hatch was in the fix itself.
+   So a caller may now pass ITS run down, and the whole sequence lives or dies together. Passing
+   nothing keeps the old behaviour, which is right for a single reading that owns itself. */
+async function sayFrUnits(units, run){
+  if(run===undefined) run=++speakRun;
   for(const t of units){ if(run!==speakRun) return; const u=U(t); if(u) await play(u.mp3,null,null,u.end);
     else announce('"'+fold(t)+'" has no recording of its own yet.'); }
 }
-async function sayEnWords(text){
-  const run=++speakRun;
+async function sayEnWords(text, run){
+  if(run===undefined) run=++speakRun;
   for(const w of String(text).split(/\s+/).filter(Boolean)){ if(run!==speakRun) return; const u=EU(w);
     if(u) await play(u.mp3,null,null,u.end); else announce('"'+fold(w)+'" has no recording of its own yet.'); }
 }
@@ -495,11 +531,12 @@ async function sayEnWords(text){
    The word path stays underneath for exactly two reasons: a line whose clip is not made yet must
    still speak rather than go quiet (A3/B0), and tapping a single word must still play that word's
    own recording (A23/A26). Nothing is sliced either way (A24). */
-async function sayEnLine(text, id){
-  const run=++speakRun; const c=C(id);
+async function sayEnLine(text, id, run){
+  if(run===undefined) run=++speakRun;
+  const c=C(id);
   if(c){ await play(c.mp3,null,null,c.end); return; }
   if(run!==speakRun) return;
-  await sayEnWords(text);
+  await sayEnWords(text, run);
 }
 function screenPairs(lines){
   const pairs=[], seen=new Set();
@@ -588,7 +625,10 @@ function buildMots(pairsAll, onDone){
   const help=document.createElement('p'); help.className='helper'; sheet.appendChild(help);
   const foot=document.createElement('div'); foot.className='mfoot'; sheet.appendChild(foot);
   const close=document.createElement('button'); close.type='button'; close.textContent='Back to the story';
-  close.onclick=()=>{ speakRun++; stop(); disarm(); sheet.remove(); };
+  /* THROUGH THE ONE DOOR, like every other teardown. This did the right things by hand and was
+     therefore fine — but "fine because this particular caller remembered" is the arrangement that
+     produced the bug in the first place. */
+  close.onclick=()=>{ stop(); reading++; closeSheets(); };
   foot.appendChild(close);
   let timers=[]; let hintCard=null;
   /* round() fills these; arm() runs in THIS scope and must not reach into round()'s */
@@ -734,14 +774,22 @@ function buildMots(pairsAll, onDone){
         if(!target){ stop(); arm(); askAgain(()=>{ stop(); sayEnWords(p.en); });
           await sayEnWords(p.en); return; }
         const k=frCards.indexOf(target);
-        if(k===i){ settle(i); arm(); askAgain(sayAsk); await sayEnWords(p.en); await sayFrUnits(p.fr);
+        /* ONE RUN FOR THE WHOLE ANSWER, NOT ONE PER HALF. Both branches below speak TWICE in a
+           row, and while each call minted its own token, cancelling the first only handed the turn
+           to the second. That is how the game's answer went on speaking after she had turned the
+           page even once closeSheets() existed. The pair now lives or dies together. */
+        if(k===i){ settle(i); arm(); askAgain(sayAsk);
+          const run=++speakRun;
+          await sayEnWords(p.en, run); await sayFrUnits(p.fr, run);
           if(done.size===pairs.length){ disarm(); await finish(); } }
         else { /* NEVER "wrong": the card she dropped on says itself, then what it really means. */
           arm(); hintCard=enCards[k];
           /* G30 — this correction IS the current order, so the button replays it, in the same
              order it was first spoken. */
-          askAgain(()=>{ stop(); (async()=>{ await sayFrUnits(pairs[k].fr); await sayEnWords(pairs[k].en); })(); });
-          await sayFrUnits(pairs[k].fr); await sayEnWords(pairs[k].en); }
+          askAgain(()=>{ stop(); (async()=>{ const r=++speakRun;
+            await sayFrUnits(pairs[k].fr, r); await sayEnWords(pairs[k].en, r); })(); });
+          const run=++speakRun;
+          await sayFrUnits(pairs[k].fr, run); await sayEnWords(pairs[k].en, run); }
       };
       c.onpointerup=release; c.onpointercancel=release;
       enCards[i]=c; enRow.appendChild(c);
@@ -752,8 +800,11 @@ function buildMots(pairsAll, onDone){
   async function finish(){
     ri++;
     if(ri<rounds.length){ round(); return; }
-    /* Back into the sentences they came from. */
-    sheet.remove(); onDone(); readScreen();
+    /* Back into the sentences they came from. THROUGH closeSheets(), not sheet.remove() — this was
+       the last path that took a sheet down by hand. It was safe only because disarm() happens at the
+       call site one line earlier, and it never bumped speakRun, which is the same gap that let the
+       game's answer keep speaking after a page turn. One door, no exceptions. */
+    closeSheets(); onDone(); readScreen();
   }
   round();
   return sheet;
@@ -999,10 +1050,19 @@ const DOW=[['Monday','lundi'],['Tuesday','mardi'],['Wednesday','mercredi'],['Thu
            ['Friday','vendredi'],['Saturday','samedi'],['Sunday','dimanche']];
 /* English, a beat, then French — the same order and the same pause the story lines use, because
    this is the story continuing and not a different kind of screen. */
-async function sayDay(en,fr){
+/* B2 IN THE WORST PLACE TO LOSE IT. This says the English day name, waits, then the French one —
+   and it had no token, so show()'s stop() killed only the clip in the air and the FRENCH half
+   arrived on the next page, alone and unglossed. Driven 2026-09-08 (.probe/_orphan-scenes.js): tap
+   Monday, turn the page 120 ms later, and "lundi" starts in the same millisecond as the new page's
+   own line. The calendar is the one screen whose whole job is teaching the seven day names IN
+   PAIRS, so a French half that outlives its English half is exactly the failure B2 exists to stop. */
+async function sayDay(en,fr,mine){
+  if(mine===undefined) mine=++reading;
   const e=EU(en), f=U(fr);
   if(e) await play(e.mp3,null,null,e.end); else announce('"'+en+'" has no recording yet.');
+  if(mine!==reading) return;
   await new Promise(r=>setTimeout(r,520));
+  if(mine!==reading) return;
   if(f) await play(f.mp3,null,null,f.end); else announce('« '+fr+' » has no recording of its own yet.');
 }
 function calendarScene(evening){
@@ -1472,10 +1532,18 @@ SCENES.dessin=()=>{
     b.innerHTML='<span></span><span class="dessin-en"></span>';
     b.firstChild.textContent='« '+fr+' »';
     b.lastChild.textContent=en;
-    b.onclick=async()=>{ stop();
+    /* THE ONLY ONE OF THESE THAT WRITES TO HER SAVED WORK, so it is the one that matters most.
+       run() sets the drawing mode and calls persist(). With no token, she could press « Dessine »,
+       change her mind, turn the page — and the French half spoke on the next page (driven
+       2026-09-08) AND the book quietly switched her picture into dots mode for tomorrow. G14 says
+       drawing is an offer, never a must; a mode she walked away from is not a choice she made. */
+    b.onclick=async()=>{ stop(); const mine=++reading;
       const e=EU(en); if(e) await play(e.mp3,null,null,e.end); else announce('"'+en+'" has no recording yet.');
+      if(mine!==reading) return;
       await new Promise(r=>setTimeout(r,380));
+      if(mine!==reading) return;
       const f=U(fr); if(f) await play(f.mp3,null,null,f.end); else announce('« '+fr+' » has no recording of its own yet.');
+      if(mine!==reading) return;
       run(); };
     return b;
   };
@@ -1591,10 +1659,14 @@ function artEl(l){
   d.appendChild(i); return d;
 }
 function show(i){
-  /* TURNING THE PAGE SILENCES THE GAME SHE LEFT. It used to remove the sheet and leave its help
-     timers running, which is what she heard as the drill "repeating the words on and on even when
-     we are on a different page and not doing the exercise" (2026-09-08). */
-  stop(); closeSheets();
+  /* TURNING THE PAGE SILENCES EVERYTHING SHE LEFT — the game AND the story reader.
+     The sheet used to be removed with its help timers still running, which is what she heard as
+     the drill "repeating the words on and on even when we are on a different page and not doing
+     the exercise" (2026-09-08). reading++ is the other half and was missing here: without it a
+     line already being read went on speaking over the page she had turned to, two voices at once
+     (.probe/_orphan-readers.js). stop() only ends the clip in the air; the LOOP that owned it
+     carried on to its next part. */
+  stop(); reading++; closeSheets();
   at=Math.max(0,Math.min(screens.length-1,i));
   /* EVERYTHING SHE HAS MET UP TO AND INCLUDING THIS SCREEN, rebuilt from the screens themselves
      rather than accumulated as she walks — so it is the same whether she read straight through,
@@ -1624,7 +1696,10 @@ async function readScreen(){
   for(const p of [...pageEl.children]){
     if(mine!==reading) return;
     if(!p._line) continue;          /* the picture is not a line and has nothing to say */
-    await sayLine(p);
+    /* PASS THE TOKEN DOWN. This used to call sayLine(p), which minted its own — so this loop's
+       check between lines was the ONLY place a read could be stopped, and a line already in flight
+       finished whatever happened. That is what kept speaking on the page she had turned to. */
+    await sayLine(p, mine);
   }
 }
 document.getElementById('next').onclick=()=>show(at+1);
