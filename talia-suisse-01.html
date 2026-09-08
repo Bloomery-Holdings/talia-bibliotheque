@@ -551,7 +551,7 @@ function buildMots(pairsAll, onDone){
   const bAgain=document.createElement('button'); bAgain.type='button'; bAgain.className='again';
   bAgain.innerHTML='<span aria-hidden="true">↺</span> « Répète »<small>say it again</small>';
   bAgain.setAttribute('aria-label','Say it again');
-  bAgain.onclick=()=>{ again(); };
+  bAgain.onclick=()=>{ arm(); again(); };   /* pressing Répète is engagement too (2026-09-08) */
   bar.appendChild(bAgain); sheet.appendChild(bar);
   const body=document.createElement('div'); sheet.appendChild(body);
   const help=document.createElement('p'); help.className='helper'; sheet.appendChild(help);
@@ -573,14 +573,35 @@ function buildMots(pairsAll, onDone){
      arm() never re-pointed it, so the one non-text hint — a card that breathes — was switched off
      for the rest of every round the moment she got one right. That is exactly the child who has
      solved one and stalled on the rest. It now re-points at the first card still unsolved. */
+  /* SHE WAS BEING TALKED OVER, AND THAT IS WHAT SHE HEARD AS TANGLED.
+     Nermeen, 2026-09-08: "some of the pages that got the exercise at the end of it its recordings
+     got mixed up and tangled and cut."
+     MEASURED, NOT GUESSED — .probe/_game-tangle.js drove the built game and logged every play and
+     pause on the page's single <audio>. The files are not shaved (check-shaved.js: CUT 0 in every
+     Chapter One bank) and the player's tail rule clears the sound on all 205 game clips
+     (.probe/_game-cut.js), so nothing was wrong with the recordings. What the log showed was the
+     GAME talking over her: the three help timers run on a fixed 15 s / 40 s / 60 s clock from the
+     start of the round, and A TAP DID NOT RESET THAT CLOCK — only a drop did. So a child doing
+     exactly what E9-ii asks of her (a tap recites) gets interrupted mid-word, because sayEnWords
+     bumps speakRun and play() stops whatever is speaking. In one 70-second run, sitting still
+     after a single tap, the game spoke unprompted for 19s-35s, 44s-56s and 64s onward, cutting
+     three clips off part-way.
+     TWO GUARDS, AND THEY COST NOTHING. The clock restarts on ANY touch of the game — a tap is
+     engagement, not being stuck — and a help line WAITS for silence rather than cutting into it.
+     Nothing here changes what the help says or that it is spoken (B0): only when. */
+  const busy=()=>{ try{ return !player.paused && !player.ended; }catch(e){ return false; } };
   const arm=()=>{ timers.forEach(clearTimeout); timers=[]; help.classList.remove('on');
-    [15000,40000,60000].forEach((ms,i)=>timers.push(setTimeout(async()=>{
-      help.textContent=m.help[i]; help.classList.add('on');
-      if(!hintCard) hintCard = curCards.find((c,k)=>!curDone.has(k)) || null;
-      if(i===2 && hintCard) hintCard.classList.add('hint');
-      askAgain(()=>{ stop(); sayEnWords(m.help[i]); });   // G30 — the help is a spoken order too
-      await sayEnWords(m.help[i]);      // B0 — she cannot read the banner
-    }, ms))); };
+    [15000,40000,60000].forEach((ms,i)=>{
+      const fire=async()=>{
+        if(busy()){ timers.push(setTimeout(fire,1200)); return; }   /* never cut into a clip */
+        help.textContent=m.help[i]; help.classList.add('on');
+        if(!hintCard) hintCard = curCards.find((c,k)=>!curDone.has(k)) || null;
+        if(i===2 && hintCard) hintCard.classList.add('hint');
+        askAgain(()=>{ stop(); sayEnWords(m.help[i]); });   // G30 — the help is a spoken order too
+        await sayEnWords(m.help[i]);      // B0 — she cannot read the banner
+      };
+      timers.push(setTimeout(fire, ms));
+    }); };
   const disarm=()=>{ timers.forEach(clearTimeout); timers=[]; help.classList.remove('on');
     if(hintCard) hintCard.classList.remove('hint'); };
   const rounds=[]; for(let i=0;i<pairsAll.length;i+=6) rounds.push(pairsAll.slice(i,i+6));
@@ -615,7 +636,8 @@ function buildMots(pairsAll, onDone){
         c.appendChild(im); }
       const lab=document.createElement('span'); lab.className='mlab'; lab.textContent=p.frText;
       c.appendChild(lab);
-      c.onclick=async()=>{ stop(); await sayFrUnits(p.fr); };
+      /* arm() — a tap is engagement, so the stuck-clock starts again from here (2026-09-08). */
+      c.onclick=async()=>{ stop(); arm(); await sayFrUnits(p.fr); };
       frCards.push(c); frRow.appendChild(c);
     });
     function settle(i){ done.add(i); frCards[i].classList.add('done'); frCards[i].classList.remove('over');
@@ -644,7 +666,7 @@ function buildMots(pairsAll, onDone){
       const release=async e=>{
         if(pid!==e.pointerId) return; pid=null;
         try{ c.releasePointerCapture(e.pointerId); }catch(x){}
-        if(!moved){ /* A TAP RECITES. */ stop(); await sayEnWords(p.en); return; }
+        if(!moved){ /* A TAP RECITES. */ stop(); arm(); await sayEnWords(p.en); return; }
         const target=over; clearOver(); if(ghost){ ghost.remove(); ghost=null; } c.classList.remove('lift');
         sheet.classList.remove('dragging');
         /* LET GO IN THE AIR USED TO SAY NOTHING AT ALL — the comment here said so and left it.
