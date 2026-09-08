@@ -1609,14 +1609,33 @@ SCENES.dessin=()=>{
        change her mind, turn the page — and the French half spoke on the next page (driven
        2026-09-08) AND the book quietly switched her picture into dots mode for tomorrow. G14 says
        drawing is an offer, never a must; a mode she walked away from is not a choice she made. */
+    /* THE BUTTON ACTS FIRST AND TALKS AFTERWARDS, AND THAT ORDER IS THE WHOLE FIX.
+       Her words, 2026-09-08: "we talked about, um, drawing and, uh, coloring, but I don't see
+       that anything has taken place. No coloring was used. No drawing was used. So seems I was
+       talking to myself about it."
+       MEASURED (.probe/_dessin5.js): pressing « Dessine » DID work - dots appeared, the palette
+       armed, the mode persisted - but only after BOTH clips had finished, 2.6 SECONDS after the
+       press, with nothing moving on screen in between. A six-year-old presses a button, sees
+       nothing happen, and presses something else; so does her mother. A feature that answers
+       after two and a half seconds of stillness has not been delivered, whatever the code does.
+       (This probe lied twice on the way to that: an audio stub that never fires onended hangs
+       the await forever, and a 900 ms wait is shorter than the two clips. Both made a WORKING
+       button look dead. A probe that mis-times a feature reads exactly like a broken one.)
+       SO run() MOVES TO THE FRONT. The drawing opens on the press, and the two words are spoken
+       over the top of it.
+       AND THIS IS G35 KEPT, NOT WEAKENED - IT IS G35 DONE PROPERLY. The token existed because
+       run() WRITES to her saved work, and a run() that fired after she had turned the page
+       switched her picture into dots mode for tomorrow, which G14 forbids: drawing is an offer,
+       never a must. Running it FIRST fixes that better than guarding it did - the write now
+       happens while she is still on the page and still pressing, which is the only moment it was
+       ever hers. The token stays on the SPEECH, which is what must not outlive the page. */
     b.onclick=async()=>{ stop(); const mine=++reading;
+      run();
       const e=EU(en); if(e) await play(e.mp3,null,null,e.end); else announce('"'+en+'" has no recording yet.');
       if(mine!==reading) return;
       await new Promise(r=>setTimeout(r,380));
       if(mine!==reading) return;
-      const f=U(fr); if(f) await play(f.mp3,null,null,f.end); else announce('« '+fr+' » has no recording of its own yet.');
-      if(mine!==reading) return;
-      run(); };
+      const f=U(fr); if(f) await play(f.mp3,null,null,f.end); else announce('« '+fr+' » has no recording of its own yet.'); };
     return b;
   };
   const bar=document.createElement('div'); bar.className='dessin-bar';
