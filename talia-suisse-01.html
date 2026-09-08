@@ -624,6 +624,15 @@ function buildMots(pairsAll, onDone){
   const arm=()=>{ timers.forEach(clearTimeout); timers=[]; help.classList.remove('on');
     [15000,40000,60000].forEach((ms,i)=>{
       const fire=async()=>{
+        /* A GAME THAT IS NO LONGER ON THE PAGE NEVER SPEAKS. Second lock on the same door as
+           closeSheets(), and deliberately not the same mechanism: closeSheets is the caller doing
+           the right thing, this is the timer refusing to speak even if a caller does not. The bug
+           it guards against is the one she reported on 2026-09-08 — a sheet removed from the DOM
+           does not cancel its setTimeout, so the drill went on talking on pages she had already
+           turned past. The self-rescheduling line below made it permanent: a help line that came
+           due while a clip was playing put ITSELF back on a timer list nothing could reach.
+           isConnected is false the moment the sheet leaves the document, however it left. */
+        if(!sheet.isConnected){ timers.forEach(clearTimeout); timers=[]; return; }
         if(busy()){ timers.push(setTimeout(fire,1200)); return; }   /* never cut into a clip */
         help.textContent=m.help[i]; help.classList.add('on');
         if(!hintCard) hintCard = curCards.find((c,k)=>!curDone.has(k)) || null;
@@ -636,6 +645,21 @@ function buildMots(pairsAll, onDone){
     }); };
   const disarm=()=>{ timers.forEach(clearTimeout); timers=[]; help.classList.remove('on');
     if(hintCard) hintCard.classList.remove('hint'); };
+  /* THE SHEET CARRIES ITS OWN OFF-SWITCH, BECAUSE REMOVING IT FROM THE PAGE DOES NOT STOP IT.
+     Nermeen, 2026-09-08: "The instructions that come at the end of each page to drill the French
+     sentences keep repeating the words on and on even when we are on a different page and not
+     doing the exercise."
+     THE FAULT: these timers live in THIS closure, one set per game. Three places tore a sheet
+     down and only ONE of them called disarm() — the "Back to the story" button. Turning the page
+     (show()) and opening another game both just did .remove(), and a detached DOM node does not
+     cancel a setTimeout. So every game she left by turning the page kept three live timers
+     running for ever, on a closure nothing could reach any more, and they went on speaking over
+     whatever page she was reading. Worse, they ACCUMULATE: the reproduction opened three games,
+     left each by turning the page, and measured 9 timers armed, 0 sheets on the page, and clips
+     still playing while she sat still doing nothing (.probe/_orphan-timers.js).
+     So the off-switch travels with the sheet, and closeSheets() below is the ONLY way a sheet is
+     taken down — a caller can no longer remove one and leave it running. */
+  sheet.__disarm=()=>{ speakRun++; disarm(); };
   const rounds=[]; for(let i=0;i<pairsAll.length;i+=6) rounds.push(pairsAll.slice(i,i+6));
   let ri=0;
   /* E9-ii — A TAP RECITES, A DRAG SOLVES. Her ruling, 2026-09-06: "the tapping is for reciting the
@@ -734,11 +758,22 @@ function buildMots(pairsAll, onDone){
   round();
   return sheet;
 }
+/* TAKING A GAME SHEET DOWN — THE ONE WAY IT IS DONE (2026-09-08).
+   Every sheet carries its own __disarm (see buildMots), and this is what calls it. It exists
+   because a .sheet was being removed from the DOM in three different places and only one of them
+   stopped the game's help timers first, which left them speaking on pages she had already turned
+   past. A removal that skips the off-switch is the whole bug, so there is now one function that
+   cannot skip it. */
+function closeSheets(){
+  document.querySelectorAll('.sheet').forEach(s=>{
+    try{ if(typeof s.__disarm==='function') s.__disarm(); }catch(e){}
+    s.remove(); });
+}
 function motsButton(lines){
   const pairs=screenPairs(lines); if(!pairs.length) return null;
   const b=document.createElement('button'); b.type='button'; b.className='motsbtn';
   b.textContent='▲ The words on this page';
-  b.onclick=()=>{ stop(); reading++; document.querySelectorAll('.sheet').forEach(x=>x.remove());
+  b.onclick=()=>{ stop(); reading++; closeSheets();
     const sh=buildMots(pairs, ()=>{ b.classList.add('done'); });
     document.body.appendChild(sh);
     /* THE INSTRUCTION IS SPOKEN ON OPENING — B0, she cannot read the button. */
@@ -1556,7 +1591,10 @@ function artEl(l){
   d.appendChild(i); return d;
 }
 function show(i){
-  stop(); document.querySelectorAll('.sheet').forEach(x=>x.remove());
+  /* TURNING THE PAGE SILENCES THE GAME SHE LEFT. It used to remove the sheet and leave its help
+     timers running, which is what she heard as the drill "repeating the words on and on even when
+     we are on a different page and not doing the exercise" (2026-09-08). */
+  stop(); closeSheets();
   at=Math.max(0,Math.min(screens.length-1,i));
   /* EVERYTHING SHE HAS MET UP TO AND INCLUDING THIS SCREEN, rebuilt from the screens themselves
      rather than accumulated as she walks — so it is the same whether she read straight through,
