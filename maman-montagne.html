@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La montagne — coded picture prototype</title>
+<!--
+  PROTOTYPE, built 2026-09-07 to TEST her rules of that morning rather than assume they compose.
+  Her instruction: "see if you can apply it and highlight contradictions if any but only after
+  testing it in reality, don't assume, guess, imagine, invent or work from memory."
+
+  RULES APPLIED, each named where it is implemented below:
+    G14  connect-the-numbered-dots; numbers spoken in French; preview beside the dots that
+         disappears at the first connection; her drawing is KEPT and never auto-deleted; she may
+         edit it or go back to the original; dots need not start at 1 and must ascend.
+    G15  animate it; replay on HER tap; nothing loops.
+    G16  two separate buttons — COLOUR IT and DRAW IT; guided auto-fill on our picture, FREE
+         colour on hers; the colour name is said when she PICKS it and again when she FIRST USES it.
+    G17  the app holds a level and raises it; the number run climbs.
+    G18  the page's own sentences come back in English then French, in the gaps, never overlapping.
+    B2   English first for sentences.
+    B2-i French alone for a number on a dot and a colour she can see.
+    A3   nothing is ever silent without saying so.
+    C14  every control carries its own colours, both themes.
+
+  Dot run is 6-13 ON PURPOSE: it demonstrates her "the numbers do not have to start from one"
+  and stays inside the contiguous French bank (un..treize), measured 2026-09-07.
+-->
+<style>
+:root{
+  --paper:#F2EFE9; --ink:#2A2622; --ink-2:#5E574F; --rule:#D8D2C8; --card:#FFFDF9;
+  --sky:#CFE3F0; --btn:#FFFDF9; --btn-ink:#2A2622; --btn-on:#2A2622; --btn-on-ink:#FFFDF9;
+  --focus:#3F6FC4;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#181513; --ink:#F0EAE2; --ink-2:#B5ABA0; --rule:#3A342E; --card:#221E1A;
+  --sky:#2A3A46; --btn:#221E1A; --btn-ink:#F0EAE2; --btn-on:#F0EAE2; --btn-on-ink:#181513;
+  --focus:#8FB3EE;
+}}
+:root[data-theme="dark"]{
+  --paper:#181513; --ink:#F0EAE2; --ink-2:#B5ABA0; --rule:#3A342E; --card:#221E1A;
+  --sky:#2A3A46; --btn:#221E1A; --btn-ink:#F0EAE2; --btn-on:#F0EAE2; --btn-on-ink:#181513;
+  --focus:#8FB3EE;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}   /* MUST precede nothing: .palette{display:flex} outranks the UA [hidden] rule */
+body{margin:0;background:var(--paper);color:var(--ink);
+  font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;padding:16px}
+h1{font-size:20px;margin:0 0 4px}
+.sub{color:var(--ink-2);font-size:14px;margin:0 0 14px}
+
+/* C14 — every control names its own colours, never inherited */
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+button{font:inherit;font-size:15px;padding:10px 16px;border-radius:10px;cursor:pointer;
+  background:var(--btn);color:var(--btn-ink);border:2px solid var(--rule);min-height:44px}
+button:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+button[aria-pressed="true"]{background:var(--btn-on);color:var(--btn-on-ink);border-color:var(--btn-on)}
+button[disabled]{opacity:.45;cursor:default}
+button small{display:block;font-size:12px;font-weight:400;opacity:.75;margin-top:1px}
+
+.work{display:flex;gap:12px;align-items:flex-start;max-width:780px}
+.stage{background:var(--card);border:2px solid var(--rule);border-radius:14px;
+  padding:10px;flex:1 1 auto;min-width:0}
+svg{display:block;width:100%;height:auto;touch-action:manipulation}
+
+/* G14 — the preview sits BESIDE the dots, never on top, and goes at the first connection */
+.preview{flex:0 0 118px;margin:0;background:var(--card);
+  border:2px solid var(--rule);border-radius:10px;padding:4px}
+.preview figcaption{font-size:11px;text-align:center;color:var(--ink-2);margin-top:2px}
+
+.line{display:flex;flex-direction:column;gap:6px;margin-top:12px;max-width:640px}
+.line button{text-align:left;font-size:17px;line-height:1.35;padding:10px 14px;border-radius:10px;
+  background:var(--card);color:var(--ink);border:2px solid var(--rule)}
+.line .say-fr{font-weight:700}
+.line button.lit{background:var(--btn-on);color:var(--btn-on-ink);border-color:var(--btn-on)}
+.palette{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;max-width:640px}
+.swatch{width:52px;height:52px;border-radius:10px;border:3px solid var(--rule);cursor:pointer;padding:0}
+.swatch[aria-pressed="true"]{border-color:var(--btn-on);transform:scale(1.06)}
+
+#say{margin-top:12px;padding:10px 14px;border-radius:10px;background:var(--card);
+  border:2px dashed var(--rule);color:var(--ink);min-height:46px;max-width:640px;font-size:15px}
+#say b{font-weight:700}
+.hint{color:var(--ink-2);font-size:13px;margin-top:8px;max-width:640px}
+@media (max-width:560px){
+  .work{flex-direction:column-reverse;align-items:stretch}
+  .preview{flex:0 0 auto;width:104px;align-self:flex-end;margin:0 0 8px 0}
+  .stage{width:100%}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<h1>« La montagne »</h1>
+<p class="sub">Coded picture prototype — tap the picture to see it move again.</p>
+
+<div class="bar">
+  <button id="btn-colour" aria-pressed="false">« Colorie » <small>colour it</small></button>
+  <button id="btn-draw"   aria-pressed="false">« Dessine » <small>draw it</small></button>
+  <button id="btn-revert" hidden>Go back to the original</button>
+  <button id="btn-delete" hidden>Delete my drawing</button>
+</div>
+
+<div class="work">
+<figure class="stage" id="stage" style="margin:0">
+  <svg id="art" viewBox="0 0 400 260" role="img" aria-label="Two mountains beside a lake">
+    <rect id="sky"  class="part" data-part="sky"  data-colour="bleu"   x="0" y="0" width="400" height="180" fill="#CFE3F0"/>
+    <path id="m1"   class="part" data-part="m1"   data-colour="vert"   d="M40 180 L120 60 L200 180 Z" fill="#8FAE87"/>
+    <path id="m2"   class="part" data-part="m2"   data-colour="vert"   d="M170 180 L250 90 L330 180 Z" fill="#A3BE9B"/>
+    <path id="snow" class="part" data-part="snow" data-colour="blanc"  d="M120 60 L96 96 L144 96 Z" fill="#FFFFFF"/>
+    <circle id="sun" class="part" data-part="sun" data-colour="jaune"  cx="330" cy="52" r="22" fill="#EFC75E"/>
+    <rect  id="lake" class="part" data-part="lake" data-colour="bleu"  x="0" y="180" width="400" height="80" fill="#9CC3D8"/>
+  </svg>
+</figure>
+  <figure class="preview" id="preview" hidden>
+    <svg viewBox="0 0 400 260" aria-hidden="true">
+      <rect x="0" y="0" width="400" height="180" fill="#CFE3F0"/>
+      <path d="M40 180 L120 60 L200 180 Z" fill="#8FAE87"/>
+      <path d="M170 180 L250 90 L330 180 Z" fill="#A3BE9B"/>
+      <path d="M120 60 L96 96 L144 96 Z" fill="#FFFFFF"/>
+      <circle cx="330" cy="52" r="22" fill="#EFC75E"/>
+      <rect x="0" y="180" width="400" height="80" fill="#9CC3D8"/>
+    </svg>
+    <figcaption>what you will draw</figcaption>
+  </figure>
+</div>
+
+<div class="palette" id="palette" hidden></div>
+<div class="line" id="line">
+  <button class="say-en" id="line-en">She draws a large mountain.</button>
+  <button class="say-fr" id="line-fr">La montagne.</button>
+</div>
+<div id="say" role="status" aria-live="polite">Tap <b>Colour it</b> or <b>Draw it</b>.</div>
+<p class="hint" id="hint"></p>
+
+<script>
+/* ------------------------------------------------------------------ *
+ *  DATA — every path below was verified to exist on disk 2026-09-07.  *
+ * ------------------------------------------------------------------ */
+var FR = '../audio/fr/mots/', EN = '../audio/en/mots/';
+
+/* G16 + her ruling 2026-09-07: "Start with six then substitute as many new colors as you can so
+   she will learn more colors." TWELVE are now recorded in BOTH languages (verified on disk
+   2026-09-07). SIX show at a time, chosen to favour the ones she has met LEAST. */
+var COLOURS = [
+  {fr:'rouge',    en:'red'},       {fr:'bleu',      en:'blue'},
+  {fr:'vert',     en:'green'},     {fr:'jaune',     en:'yellow'},
+  {fr:'orange',   en:'orange'},    {fr:'blanc',     en:'white'},
+  {fr:'violet',   en:'purple'},    {fr:'rose',      en:'pink'},
+  {fr:'noir',     en:'black'},     {fr:'gris',      en:'grey'},
+  {fr:'marron',   en:'brown'},     {fr:'turquoise', en:'turquoise'}
+];
+var HEX = {rouge:'#C0492C',bleu:'#4E86AE',vert:'#6E9464',jaune:'#E4B93F',
+  orange:'#D9813C',blanc:'#FFFFFF',violet:'#7E5AA8',rose:'#D98BA8',
+  noir:'#332F2B',gris:'#9A958E',marron:'#8A5A3B',turquoise:'#4FA8A0'};
+COLOURS.forEach(function(c){ c.hex = HEX[c.fr]; });
+var SHOWN = 6;
+var BLANK = '#FBF9F5';   /* the uncoloured page */
+
+/* G14 + G17 — the run ASCENDS and does NOT start at 1. 6..13 sits inside the
+   contiguous French bank (un..treize) measured 2026-09-07. */
+var NUM_FR = {6:'six',7:'sept',8:'huit',9:'neuf',10:'dix',11:'onze',12:'douze',13:'treize'};
+var DOTS = [
+  {n:6,  x:50,  y:190}, {n:7,  x:130, y:70},  {n:8,  x:190, y:190},
+  {n:9,  x:270, y:100}, {n:10, x:350, y:190}, {n:11, x:350, y:230},
+  {n:12, x:200, y:230}, {n:13, x:50,  y:230}
+];
+
+/* G18 — sentences that belong to THIS picture, from the chapter. Whole-line takes. */
+var SENTENCES = [
+  {en:'She draws a large mountain.', fr:'La montagne.',      frClip:FR+'montagne.mp3'},
+  {en:'Very big mountains.',         fr:'Les montagnes.',    frClip:FR+'montagnes.mp3'},
+  {en:'The lake.',                   fr:'Le lac.',           frClip:FR+'lac.mp3'}
+];
+
+/* ------------------------------------------------------------------ *
+ *  SPEECH — one voice at a time. G18: "don't end up to be confusing"  *
+ * ------------------------------------------------------------------ */
+var LOG = [];                       /* the harness reads this */
+window.__spoken = LOG;
+var busy = false, sentenceTimer = null;
+
+function announce(txt){ document.getElementById('say').innerHTML = txt; }
+
+/* A3 — a missing clip is ANNOUNCED. Never silent, never faked. */
+function play(src, label, kind){
+  if (!src){ LOG.push({kind:'MISSING', label:label});
+    announce('<b>' + label + '</b> — no recording yet.'); return Promise.resolve(); }
+  LOG.push({kind:kind, label:label, src:src});
+  busy = true;
+  return new Promise(function(res){
+    var a = new Audio(src);
+    var done = function(){ busy = false; res(); };
+    a.onended = done;
+    a.onerror = function(){ LOG.push({kind:'MISSING', label:label, src:src});
+      announce('<b>' + label + '</b> — no recording yet.'); done(); };
+    var p = a.play();
+    if (p && p.catch) p.catch(done);       /* headless/autoplay-blocked: resolve, still logged */
+    setTimeout(done, 1600);                /* ceiling so a queue can never wedge */
+  });
+}
+
+/* HER ACTION ALWAYS WINS THE MOMENT (G18). A pending sentence is cancelled, never layered. */
+function herTurn(){ if (sentenceTimer){ clearTimeout(sentenceTimer); sentenceTimer = null; } }
+
+/* G18 — sentences fill the GAPS. English first, then French (B2). Never while busy. */
+var sIdx = 0, cur = null;
+function scheduleSentence(){
+  if (sentenceTimer) clearTimeout(sentenceTimer);
+  sentenceTimer = setTimeout(function(){
+    if (busy || mode === 'view'){ scheduleSentence(); return; }
+    showLine(SENTENCES[sIdx % SENTENCES.length]); sIdx++;
+    sayLine();
+    scheduleSentence();
+  }, 9000);                                            /* far apart, so it reads as separate */
+}
+
+/* ------------------------------------------------------------------ *
+ *  ANIMATION — G15. Plays ONCE. Replays on HER tap. Never loops.      *
+ * ------------------------------------------------------------------ */
+var parts = Array.prototype.slice.call(document.querySelectorAll('.part'));
+parts.forEach(function(el){ el.setAttribute('stroke','#2A2622'); el.setAttribute('stroke-width','1.5'); });
+function blankOut(){ parts.forEach(function(el){ el.setAttribute('fill', BLANK); }); }
+function restoreOriginal(){ parts.forEach(function(el){ el.setAttribute('fill', el.dataset.orig); }); }
+function animateOnce(){
+  parts.forEach(function(el, i){
+    el.style.transition = 'none'; el.style.opacity = '0';
+    setTimeout(function(){
+      el.style.transition = 'opacity .45s ease'; el.style.opacity = '1';
+    }, 90 * i);
+  });
+}
+
+/* ------------------------------------------------------------------ *
+ *  STATE — G14: nothing is ever deleted automatically.                *
+ * ------------------------------------------------------------------ */
+var KEY = 'talia.codedpicture.montagne';
+var saved = null;
+try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch(e){ saved = null; }
+function persist(){ try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch(e){} }
+
+var mode = 'view';               /* view | colour | draw */
+var picked = null;               /* the colour she picked */
+var usedThisPick = false;        /* G16 — say the name again on FIRST USE */
+var connected = [];              /* dot order so far */
+var previewGone = false;
+
+/* ------------------------------------------------------------------ *
+ *  MODES                                                             *
+ * ------------------------------------------------------------------ */
+var bColour = document.getElementById('btn-colour'),
+    bDraw   = document.getElementById('btn-draw'),
+    bRevert = document.getElementById('btn-revert'),
+    bDelete = document.getElementById('btn-delete'),
+    palette = document.getElementById('palette'),
+    preview = document.getElementById('preview'),
+    art     = document.getElementById('art'),
+    hint    = document.getElementById('hint');
+
+var MET_KEY = 'talia.colours.met';
+var met = {};
+try { met = JSON.parse(localStorage.getItem(MET_KEY) || '{}'); } catch(e){ met = {}; }
+function sawColour(fr){ met[fr] = (met[fr]||0) + 1;
+  try { localStorage.setItem(MET_KEY, JSON.stringify(met)); } catch(e){} }
+/* G17 — the app holds what she has met and raises what it offers. Least-met first. */
+function sixOnOffer(){
+  return COLOURS.slice().sort(function(a,b){ return (met[a.fr]||0) - (met[b.fr]||0); }).slice(0, SHOWN);
+}
+function buildPalette(){
+  palette.innerHTML = '';
+  sixOnOffer().forEach(function(c){
+    var b = document.createElement('button');
+    b.className = 'swatch'; b.style.background = c.hex;
+    b.setAttribute('aria-pressed','false');
+    b.setAttribute('aria-label', c.en + ' — ' + c.fr);
+    b.onclick = function(){
+      herTurn();
+      Array.prototype.forEach.call(palette.children, function(o){
+        o.setAttribute('aria-pressed', String(o === b)); });
+      picked = c; usedThisPick = false; sawColour(c.fr);
+      /* G16 — say it when she PICKS it. B2-i: she can see the colour, so French alone. */
+      announce('<b>' + c.fr + '</b>');
+      play(FR + c.fr + '.mp3', c.fr, 'FR-COLOUR-PICK');
+    };
+    palette.appendChild(b);
+  });
+}
+
+function setMode(m){
+  herTurn();
+  mode = m;
+  bColour.setAttribute('aria-pressed', String(m === 'colour'));
+  bDraw.setAttribute('aria-pressed',   String(m === 'draw'));
+  palette.hidden = (m === 'view') || (m === 'draw' && connected.length < DOTS.length);
+  preview.hidden = (m !== 'draw') || previewGone;
+  clearDots();
+  /* FOUND BY LOOKING, 2026-09-07: with the finished picture still on the canvas she
+     would be joining dots over a picture that is already drawn — which makes the drawing
+     pointless AND makes the preview beside it redundant. In draw mode the paper is blank
+     and the small preview is the only reference, which is what she described. */
+  parts.forEach(function(el){
+    el.style.transition = 'opacity .3s ease';
+    el.style.opacity = (m === 'draw' && connected.length < DOTS.length) ? '0.06' : '1';
+  });
+  if (m === 'draw') drawDots();
+  bRevert.hidden = !(saved && saved.strokes);
+  bDelete.hidden = !(saved && saved.strokes);
+  if (m === 'colour'){
+    blankOut();
+    hint.textContent = 'Pick a colour, then tap a part of the picture.';
+    announce('Tap a part of the picture.');
+  } else if (m === 'draw'){
+    hint.textContent = 'Join the numbers in order. Then you can colour it however you like.';
+    announce('Start at <b>6</b>.');
+  } else {
+    restoreOriginal();
+    hint.textContent = '';
+  }
+  scheduleSentence();
+}
+
+/* --- (a) COLOURING OUR PICTURE IS GUIDED (G16): the right colour fills by itself --- */
+parts.forEach(function(el){
+  el.style.cursor = 'pointer';
+  el.addEventListener('click', function(){
+    herTurn();
+    if (mode === 'view'){ animateOnce(); return; }      /* G15 — replay on her tap */
+    if (mode === 'colour'){
+      /* her pick governs; the part's own colour is only the default before she has picked */
+      var want = picked ? picked.fr : el.getAttribute('data-colour');
+      var c = COLOURS.filter(function(x){ return x.fr === want; })[0];
+      if (!c && picked) c = picked;
+      if (!c){ play(null, want, 'FR-COLOUR'); return; }  /* A3 — announced, not silent */
+      el.setAttribute('fill', c.hex);
+      saved = saved || {}; saved.fills = saved.fills || {};
+      saved.fills[el.getAttribute('data-part')] = c.fr; persist();
+      bRevert.hidden = false; bDelete.hidden = false;
+      announce('<b>' + c.fr + '</b>');
+      sawColour(c.fr);
+      play(FR + c.fr + '.mp3', c.fr, 'FR-COLOUR-FILL');  /* B2-i — she can see it */
+      return;
+    }
+    if (mode === 'draw' && connected.length >= DOTS.length && picked){
+      /* --- (b) COLOURING HER OWN DRAWING IS FREE (G16): her colour, her choice --- */
+      el.setAttribute('fill', picked.hex);
+      saved = saved || {}; saved.fills = saved.fills || {};
+      saved.fills[el.getAttribute('data-part')] = picked.fr; persist();
+      if (!usedThisPick){                                /* G16 — again on FIRST USE */
+        usedThisPick = true;
+        announce('<b>' + picked.fr + '</b>');
+        play(FR + picked.fr + '.mp3', picked.fr, 'FR-COLOUR-FIRSTUSE');
+      }
+    }
+  });
+});
+
+/* --- G14: numbered dots, ascending, French spoken, preview gone at first connection --- */
+function clearDots(){
+  Array.prototype.slice.call(art.querySelectorAll('.dot,.trace')).forEach(function(n){ n.remove(); });
+}
+function drawDots(){
+  connected = [];
+  DOTS.forEach(function(d){
+    var g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('class','dot'); g.setAttribute('data-n', d.n);
+    var c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+    c.setAttribute('cx', d.x); c.setAttribute('cy', d.y); c.setAttribute('r', 13);
+    c.setAttribute('fill','#FFFDF9'); c.setAttribute('stroke','#2A2622'); c.setAttribute('stroke-width','2');
+    var t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x', d.x); t.setAttribute('y', d.y + 5);
+    t.setAttribute('text-anchor','middle'); t.setAttribute('font-size','14');
+    t.setAttribute('fill','#2A2622'); t.textContent = d.n;   /* the numeral — B2-i */
+    g.appendChild(c); g.appendChild(t);
+    g.style.cursor = 'pointer';
+    g.addEventListener('click', function(){ tapDot(d); });
+    art.appendChild(g);
+  });
+}
+function tapDot(d){
+  herTurn();
+  var want = DOTS[connected.length];
+  if (!want || d.n !== want.n){
+    /* nothing is ever marked wrong, but a wrong tap is never met with silence */
+    announce('Next is <b>' + (want ? want.n : '') + '</b>.');
+    return;
+  }
+  if (!previewGone){ previewGone = true; preview.hidden = true; }   /* G14 — at FIRST connection */
+  connected.push(d.n);
+  var word = NUM_FR[d.n];
+  announce('<b>' + word + '</b>');
+  play(word ? FR + word + '.mp3' : null, word || String(d.n), 'FR-NUMBER');  /* B2-i */
+  if (connected.length > 1){
+    var prev = DOTS[connected.length - 2];
+    var l = document.createElementNS('http://www.w3.org/2000/svg','line');
+    l.setAttribute('class','trace');
+    l.setAttribute('x1', prev.x); l.setAttribute('y1', prev.y);
+    l.setAttribute('x2', d.x);    l.setAttribute('y2', d.y);
+    l.setAttribute('stroke','#2A2622'); l.setAttribute('stroke-width','3');
+    art.insertBefore(l, art.querySelector('.dot'));
+  }
+  if (connected.length === DOTS.length){
+    saved = saved || {}; saved.strokes = connected.slice(); persist();
+    parts.forEach(function(el){ el.style.opacity = '1'; });   /* her drawing is finished: show it */
+    palette.hidden = false;
+    bRevert.hidden = false; bDelete.hidden = false;
+    hint.textContent = 'It is yours now. Pick a colour and put it wherever you like.';
+    announce('Now colour it however you like.');
+  }
+}
+
+/* G14 — she may EDIT it or GO BACK to the original. Nothing auto-deletes. */
+bRevert.onclick = function(){
+  herTurn(); previewGone = false;
+  parts.forEach(function(el){ el.setAttribute('fill', el.dataset.orig); });
+  setMode('view'); animateOnce();
+  announce('Back to the original picture. Your drawing is still saved.');
+};
+bDelete.onclick = function(){
+  herTurn();
+  saved = null; try { localStorage.removeItem(KEY); } catch(e){}   /* HER tap only */
+  previewGone = false; connected = [];
+  parts.forEach(function(el){ el.setAttribute('fill', el.dataset.orig); });
+  setMode('view');
+  announce('Deleted. You can draw it again whenever you like.');
+};
+
+/* HER RULING: the buttons are French. "She will eventually learn it." B2 keeps English first;
+   en/mots/color.mp3 is the file that exists (not colour.mp3) — checked, not assumed. */
+bColour.onclick = function(){ herTurn();
+  play(EN + 'color.mp3', 'colour', 'EN-BUTTON');
+  play(FR + 'colorie.mp3', 'Colorie', 'FR-BUTTON');
+  setMode(mode === 'colour' ? 'view' : 'colour'); };
+bDraw.onclick   = function(){ herTurn();
+  play(EN + 'draw.mp3', 'draw', 'EN-BUTTON');
+  play(FR + 'dessine.mp3', 'Dessine', 'FR-BUTTON');
+  setMode(mode === 'draw'   ? 'view' : 'draw');   };
+
+/* ---- boot: the FINISHED PICTURE is what she sees (G14) ---- */
+parts.forEach(function(el){ el.dataset.orig = el.getAttribute('fill'); });
+buildPalette();
+if (saved && saved.fills){                      /* her work survived the reload */
+  Object.keys(saved.fills).forEach(function(k){
+    var c = COLOURS.filter(function(x){ return x.fr === saved.fills[k]; })[0];
+    var el = art.querySelector('[data-part="' + k + '"]');
+    if (c && el) el.setAttribute('fill', c.hex);
+  });
+  bRevert.hidden = false; bDelete.hidden = false;
+}
+animateOnce();
+scheduleSentence();
+function showLine(s){
+  cur = s;
+  document.getElementById('line-en').textContent = s.en;
+  document.getElementById('line-fr').textContent = s.fr;
+}
+function lit(el, on){ el.classList.toggle('lit', on); }
+async function sayLine(){
+  var e = document.getElementById('line-en'), fr = document.getElementById('line-fr');
+  lit(e,true);  await play(null, cur.en, 'EN-LINE');  lit(e,false);   /* B2 — English first */
+  lit(fr,true); await play(cur.frClip, cur.fr, 'FR-LINE'); lit(fr,false);
+}
+document.getElementById('line-en').onclick = function(){ herTurn(); lit(this,true);
+  play(null, cur.en, 'EN-LINE'); var t=this; setTimeout(function(){lit(t,false);},900); };
+document.getElementById('line-fr').onclick = function(){ herTurn(); lit(this,true);
+  play(cur.frClip, cur.fr, 'FR-LINE'); var t=this; setTimeout(function(){lit(t,false);},900); };
+showLine(SENTENCES[0]);
+window.__ready = true;
+</script>
+</body>
+</html>

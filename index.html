@@ -87,6 +87,34 @@ addEventListener('appinstalled', () => { const box = document.getElementById('in
   <a class="book" href="talia-detective.html">
     <span class="big">🕵️</span><span class="fr">Le petit détective</span><span class="en">Detective — listen to the clues, find the friend</span></a>
 </div>
+<div style="background:#FFFFFF;border:3px solid #E5D9C3;border-radius:16px;padding:12px 18px;
+  max-width:64ch;text-align:center;font-size:15px;color:#33291C;margin-top:18px">
+  <a href="pour-maman.html" style="display:inline-block;font-family:var(--f);font-size:19px;font-weight:700;
+    color:#fff;background:#20313F;border-radius:999px;padding:12px 26px;min-height:48px;text-decoration:none;
+    box-shadow:0 4px 0 #0E1A22">📋 &nbsp;Pour maman — where we are</a>
+  <div style="margin-top:10px;color:#8A7B63;font-size:14px">Not for Talia. The book, every picture,
+    the numbers, and what is still wrong.</div>
+  <button id="fresh" style="font-family:var(--f);font-size:15px;font-weight:700;color:#33291C;
+    background:#F3E9D6;border:2px solid #E5D9C3;border-radius:999px;padding:9px 18px;min-height:44px;
+    cursor:pointer;margin-top:12px">🔄 &nbsp;Get the newest version</button>
+  <div id="vline" style="margin-top:6px;color:#8A7B63;font:13px ui-monospace,Menlo,Consolas,monospace"></div>
+</div>
+<script>
+/* THE ESCAPE HATCH. Until 2026-09-08 the worker was cache-first for everything and installed its
+   files atomically, so a tablet that failed one download of a 17.8 MB chapter kept serving the old
+   book for ever — a push could be live and she would never see it. Pages are network-first now, and
+   this button is the way out when a tablet is still holding an old worker. */
+document.getElementById('vline').textContent = 'talia-v27';
+document.getElementById('fresh').addEventListener('click', async () => {
+  const b = document.getElementById('fresh');
+  b.textContent = 'Fetching…'; b.disabled = true;
+  try {
+    if (window.caches) for (const k of await caches.keys()) await caches.delete(k);
+    if (navigator.serviceWorker) for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister();
+  } catch (e) { /* a tablet that blocks storage still gets the reload below */ }
+  location.replace(location.pathname + '?v=' + Date.now());
+});
+</script>
 <p class="note">Pour maman : ajoute cette page à l'écran d'accueil de la tablette
 (« Add to Home Screen ») et toute l'app est à un doigt — sans compte, sans connexion.
 Après une première visite en wifi, tout fonctionne même hors ligne.</p>
