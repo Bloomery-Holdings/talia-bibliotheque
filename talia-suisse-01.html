@@ -951,7 +951,7 @@ function paginate(){
      IT SELF-LIMITS ON A SMALL DEVICE: where a screen only holds two lines there is no screen
      with more than MIN to borrow from, so the loop moves nothing rather than fighting the
      viewport. That is why there is no device check here and no magic number about phones. */
-  var MIN_LINES=3;
+  var MIN_LINES=4;
   var sameArt=function(a,b){ return ((a&&a.src)||'')===((b&&b.src)||''); };
   var fits=function(ls){
     probe.innerHTML='';
@@ -960,6 +960,16 @@ function paginate(){
     probe.appendChild(gameBtn);
     return probe.scrollHeight<=room;
   };
+  /* SWEEP UNTIL NOTHING MOVES, BECAUSE ONE FORWARD PASS CAN STARVE THE SCREEN IT JUST DRAINED.
+     Screen i borrows from i-1, but i-1 has already been walked past and is never re-examined,
+     so a page can be left shorter than the one it just fixed. MEASURED, not reasoned about:
+     raising the minimum to 4 with a single pass CREATED two one-line pages in landscape that a
+     minimum of 3 did not have - it made her first complaint worse while improving the average.
+     Sweeping to a fixed point is what makes the minimum safe to raise at all.
+     Bounded at 6 passes: it settles in two or three, and a bound means a future change to the
+     move rule can never hang the page instead of paginating it. */
+  for(var pass=0; pass<6; pass++){
+  var movedAny=false;
   for(var i=1;i<screens.length;i++){
     var cs2=screens[i], ps=screens[i-1];
     if(cs2.length>=MIN_LINES) continue;
@@ -976,7 +986,23 @@ function paginate(){
       if(moved.artNew) break;
       ps.pop(); cs2.unshift(moved);
       if(!fits(cs2)){ cs2.shift(); ps.push(moved); break; }
+      movedAny=true;
     }
+  }
+  /* A PAGE LEFT WITH ONE LINE IS THE THING SHE ACTUALLY REPORTED, so it gets a second chance the
+     general rule does not give it: it may take a line from a giver only ONE ahead, accepting a
+     2-and-2 split, because two pages of two beat one page of three and one page of one. */
+  for(var j=1;j<screens.length;j++){
+    var c1=screens[j], p1=screens[j-1];
+    if(c1.length!==1) continue;
+    if(!sameArt(p1[0].art,c1[0].art) || p1[0].scene!==c1[0].scene) continue;
+    if(p1.length<2) continue;
+    var m1=p1[p1.length-1];
+    if(m1.artNew) continue;
+    p1.pop(); c1.unshift(m1);
+    if(!fits(c1)){ c1.shift(); p1.push(m1); } else movedAny=true;
+  }
+  if(!movedAny) break;
   }
   pageEl.innerHTML='';
   show(Math.min(at,screens.length-1));
