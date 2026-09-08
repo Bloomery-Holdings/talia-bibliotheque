@@ -7,7 +7,7 @@
    2. fetch was cache-first for EVERYTHING, so an updated page could not arrive while the old
       one sat in the cache. Pages (navigations) are now NETWORK-FIRST: newest when online,
       cached copy when offline. Everything else stays cache-first. */
-const V = 'talia-v37';
+const V = 'talia-v38';
 const FILES = ['./index.html','./talia-journee.html','./talia-mots-magiques.html','./talia-vie-01.html',
   './talia-jour-01.html','./talia-defis.html','./talia-cartes.html',
   './talia-leo-ballon.html','./talia-leo-jus.html',
