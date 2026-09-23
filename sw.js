@@ -7,7 +7,7 @@
    2. fetch was cache-first for EVERYTHING, so an updated page could not arrive while the old
       one sat in the cache. Pages (navigations) are now NETWORK-FIRST: newest when online,
       cached copy when offline. Everything else stays cache-first. */
-const V = 'talia-v52';
+const V = 'talia-v53';
 const FILES = ['./index.html','./talia-journee.html','./talia-mots-magiques.html','./talia-vie-01.html',
   './talia-jour-01.html','./talia-defis.html','./talia-cartes.html',
   './talia-leo-ballon.html','./talia-leo-jus.html',
@@ -18,7 +18,7 @@ const FILES = ['./index.html','./talia-journee.html','./talia-mots-magiques.html
 
 self.addEventListener('install', e => e.waitUntil(
   caches.open(V)
-    .then(c => Promise.allSettled(FILES.map(f => c.add(f))))
+    .then(c => Promise.allSettled(FILES.map(f => c.add(new Request(f, { cache: 'no-cache' })))))
     .then(() => self.skipWaiting())));
 
 self.addEventListener('activate', e => e.waitUntil(caches.keys().then(ks =>
@@ -33,7 +33,11 @@ self.addEventListener('fetch', e => {
 
   if (isPage) {
     // NETWORK FIRST: she gets the newest page whenever the tablet is online.
-    e.respondWith(fetch(req).then(r => {
+    /* 2026-09-23 — THE THIRD FAULT, same symptom ('I push and she never sees it'): fetch(req) goes through the browser's
+       HTTP cache, and GitHub Pages sends max-age=600, so a page opened within ten minutes of the last open came back from
+       that cache without ever asking the server. Network-first was network-first only after ten minutes. no-cache
+       revalidates with the server every time (a 304 when nothing changed, so it costs almost nothing). Her ok, 2026-09-23. */
+    e.respondWith(fetch(req, { cache: 'no-cache' }).then(r => {
       const cp = r.clone();
       caches.open(V).then(c => c.put(req, cp));
       return r;
