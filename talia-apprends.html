@@ -218,22 +218,30 @@ function playClip(c, mark) {
   });
 }
 const clipFr = w => DATA.fr[fold(w)] || { text: w }, clipEn = w => DATA.en[fold(w)] || { text: w }, clipL = id => DATA.clips[id] || { text: id };
-/* speak a sequence: [{fr:'lundi', mark:el} | {en:'Monday'} | {id:'h…'} | {wait:300}] — cancellable by any later stop() */
+/* speak a sequence: [{fr:'lundi', mark:el} | {en:'Monday'} | {id:'h…'} | {wait:300}] — cancellable by any later stop()
+   2026-09-25: speakBusy counts the sequences still running (the gaps between clips included), lastCompleted is the last sequence
+   heard to its end, lastSound when something last started or stopped sounding — a page built on this engine may read them
+   (the story games' help lines wait for silence; the engine itself does not use them) */
+let speakBusy = 0, lastCompleted = null, lastSound = Date.now();
 async function speak(seq) {
-  stop(); const mine = token;
-  for (const s of seq) {
-    if (mine !== token) return false;
-    if (s.wait) { await new Promise(r => setTimeout(r, s.wait)); continue; }
-    const c = s.fr ? clipFr(s.fr) : s.en ? clipEn(s.en) : clipL(s.id);
-    await playClip(c, s.mark || null);   /* if another speak() started meanwhile, the token moved and the next turn of the loop ends this one */
-  }
-  return mine === token;
+  stop(); const mine = token; speakBusy++; lastSound = Date.now();
+  try {
+    for (const s of seq) {
+      if (mine !== token) return false;
+      if (s.wait) { await new Promise(r => setTimeout(r, s.wait)); continue; }
+      const c = s.fr ? clipFr(s.fr) : s.en ? clipEn(s.en) : clipL(s.id);
+      await playClip(c, s.mark || null);   /* if another speak() started meanwhile, the token moved and the next turn of the loop ends this one */
+    }
+    if (mine === token) lastCompleted = seq;
+    return mine === token;
+  } finally { speakBusy--; lastSound = Date.now(); }
 }
 /* ===================== the sitting: what she has heard ===================== */
 const heardLong = {};      /* game key → true once the long instruction was heard this sitting (no storage, by rule) */
 let lastPrompt = null;     /* G30 — what « Répète » says again */
 let helpTimers = [], helpLines = [], idleSince = 0;
-function armHelp() { helpTimers.forEach(clearTimeout); helpTimers = []; if (!helpLines.length) return; [15000, 40000, 60000].forEach((ms, i) => helpTimers.push(setTimeout(() => speak([{ id: helpLines[Math.min(i, helpLines.length - 1)] }]), ms))); }
+function armHelp() { if (typeof helpPolicy === 'function') return helpPolicy();   /* a page may own its help lines (the story games: only in silence) */
+  helpTimers.forEach(clearTimeout); helpTimers = []; if (!helpLines.length) return; [15000, 40000, 60000].forEach((ms, i) => helpTimers.push(setTimeout(() => speak([{ id: helpLines[Math.min(i, helpLines.length - 1)] }]), ms))); }
 document.addEventListener('pointerdown', () => { if (helpLines.length) armHelp(); }, true);
 function setPrompt(seq) { lastPrompt = seq; return speak(seq); }
 
