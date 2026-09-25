@@ -7,13 +7,13 @@
    2. fetch was cache-first for EVERYTHING, so an updated page could not arrive while the old
       one sat in the cache. Pages (navigations) are now NETWORK-FIRST: newest when online,
       cached copy when offline. Everything else stays cache-first. */
-const V = 'talia-v59';
+const V = 'talia-v64';
 const FILES = ['./index.html','./talia-journee.html','./talia-mots-magiques.html','./talia-vie-01.html',
   './talia-jour-01.html','./talia-defis.html','./talia-cartes.html',
   './talia-leo-ballon.html','./talia-leo-jus.html',
   './talia-leo-pluie.html','./talia-sonson-mer.html','./talia-jeux.html','./talia-atelier.html',
   './talia-science-01.html','./talia-detective.html',
-  './talia-suisse-01.html','./talia-gentillesse.html','./talia-histoires.html','./talia-apprends.html','./talia-piano.html','./talia-tour.html',
+  './talia-suisse-01.html','./talia-histoires-verbes.html','./talia-histoires-detective.html','./talia-histoires-images.html','./talia-histoires-phrases.html','./talia-gentillesse.html','./talia-histoires.html','./talia-apprends.html','./talia-piano.html','./talia-tour.html',
   './pour-maman.html','./maman-preflights.html','./maman-images.html','./maman-montagne.html','./maman-choix.html'];
 
 self.addEventListener('install', e => e.waitUntil(
