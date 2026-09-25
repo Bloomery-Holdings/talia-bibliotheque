@@ -328,6 +328,9 @@ img{pointer-events:none}
 .colbtn .sw{display:inline-flex; gap:3px} .colbtn .sw i{width:16px; height:16px; border-radius:4px; display:block}
 .colbtn.on{background:var(--card); border-color:var(--fr)}
 .colbtn:not(.on) .sw i{background:var(--soft) !important}
+.cpic{flex:1 1 0; min-height:0; display:none; justify-content:center}
+.cpic.on{display:flex}
+.cpic img{height:100%; max-width:100%; object-fit:contain; border-radius:18px; border:3px solid var(--line); background:#fff; pointer-events:none}
 .vlead{display:grid; grid-template-columns:1fr auto; gap:12px; align-items:center; flex:0 0 auto}
 /* ---------- 2026-09-25 fix round ---------- */
 /* a tab change: the next page is large — she sees this (the tab's icon, a turning wheel on the paper colour), never a white screen; silent */
@@ -1128,7 +1131,10 @@ GAMES['construis-verbes'] = ctx => {
   const lead = el('div', 'vlead'); board.appendChild(lead); const enl = el('div', 'vline en'); lead.appendChild(enl);
   const col = el('button', 'colbtn on', '<span class="sw"><i style="background:var(--who-line)"></i><i style="background:var(--act-line)"></i><i style="background:var(--rest-line)"></i></span>Couleurs'); lead.appendChild(col);
   col.onclick = () => { colours = !colours; col.classList.toggle('on', colours); board.classList.toggle('nocol', !colours); speak(withMark(uiSay('couleurs'), col)); };
+  /* her picture of the sentence (2026-09-25): above the tiles for the whole round */
+  const pbox = el('div', 'cpic', '<img alt="" draggable="false">'), pic = pbox.querySelector('img'); if (sents.some(s => s.pic)) board.appendChild(pbox);
   const round = () => { if (area) area.forEach(n => n.remove()); delete board.dataset.settled; const s = sents[r % sents.length]; enl.textContent = '';
+    if (s.pic) { pic.src = s.pic; pbox.classList.add('on'); } else pbox.classList.remove('on');
     const before = board.children.length;
     buildSentence(ctx, { tiles: s.tiles, slotCls: 'vtile slot drop', tileCls: 'vtile', colour: i => 'c' + i, sayTile: i => s.tiles[i].map(u => ({ fr: u })), sayAll: d => speak(withMark(vFr(s), d)),
       onDone: () => { board.dataset.settled = '1'; enl.textContent = s.en; speak(vFr(s).concat(vEn(s))).then(() => { if (!ctx.live()) return; r++; whenIdle(ctx, () => { if (r >= sents.length) ctx.done(); else round(); }); }); } });
