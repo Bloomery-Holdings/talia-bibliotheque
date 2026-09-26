@@ -470,6 +470,8 @@ function ouva(m, board, gen, back, opening) {
       const wrong = placed.map((t, k) => t.u.key === v.units[k].key ? -1 : k).filter(k => k >= 0);
       if (!wrong.length) {   /* right: green, the sentence in French, then its English, next */
         settled = true; slots.classList.add('right');
+        /* the design chat, 2026-09-26: when the order is right, the finished sentence is shown WITH its punctuation — the real sentence */
+        placed.forEach(t => { t.el.textContent = t.u.t; });
         speak([{ id: v.frId, mark: pic }, { wait: 200 }, { id: v.enId, mark: pic }, { wait: 700 }]).then(() => { if (gen !== screenGen) return; r++; if (r >= list.length) finish(); else round(); });
         return;
       }
